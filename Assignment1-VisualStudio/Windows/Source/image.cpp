@@ -139,6 +139,13 @@ void Image::ExtractChannel(int channel)
 void Image::Quantize (int nbits)
 {
   /* Your Work Here (Section 3.3.1) */
+	for (int i = 0; i < num_pixels; i++) 
+	{
+		double num = pow(2.0, nbits);
+		pixels[i].SetClamp((255.0 / num) * floor(pixels[i].r * num / 256.0),
+						   (255.0 / num) * floor(pixels[i].g * num / 256.0),
+						   (255.0 / num) * floor(pixels[i].b * num / 256.0));
+	}
 }
 
 
