@@ -152,6 +152,15 @@ void Image::Quantize (int nbits)
 void Image::RandomDither (int nbits)
 {
   /* Your Work Here (Section 3.3.2) */
+	srand(time_t(NULL));
+	for (int i = 0; i < num_pixels; i++)
+	{
+		double num = pow(2.0, nbits);
+		pixels[i].SetClamp((255.0 / num) * floor(pixels[i].r * num / 256.0 + 0.5 - static_cast <float> (rand()) / static_cast <float> (RAND_MAX)),
+			(255.0 / num) * floor(pixels[i].g * num / 256.0 + 0.5 - static_cast <float> (rand()) / static_cast <float> (RAND_MAX)),
+			(255.0 / num) * floor(pixels[i].b * num / 256.0 + 0.5 - static_cast <float> (rand()) / static_cast <float> (RAND_MAX)));
+	}
+
 }
 
 
@@ -178,14 +187,68 @@ void Image::OrderedDither(int nbits)
 
 /* Error-diffusion parameters for Floyd-Steinberg*/
 const double
-    ALPHA = 7.0 / 16.0,
-    BETA  = 3.0 / 16.0,
-    GAMMA = 5.0 / 16.0,
-    DELTA = 1.0 / 16.0;
+    ALPHA = 7.0 / 16.0, //right
+    BETA  = 3.0 / 16.0, //bottomleft
+    GAMMA = 5.0 / 16.0, //bottom
+    DELTA = 1.0 / 16.0; //botomright
 
 void Image::FloydSteinbergDither(int nbits)
 {
   /* Your Work Here (Section 3.3.3) */
+	for (int i = 0; i < num_pixels; i++)
+	{
+		double num = pow(2.0, nbits);
+		double r_err = pixels[i].r - (255.0 / num) * floor(pixels[i].r * num / 256.0);
+		double g_err = pixels[i].g - (255.0 / num) * floor(pixels[i].g * num / 256.0);
+		double b_err = pixels[i].b - (255.0 / num) * floor(pixels[i].b * num / 256.0);
+
+		pixels[i].SetClamp(pixels[i].r - (255.0 / num) * floor(pixels[i].r * num / 256.0),
+			(255.0 / num) * floor(pixels[i].g * num / 256.0),
+			(255.0 / num) * floor(pixels[i].b * num / 256.0));
+
+		// left most
+		if (i % width == 0)
+		{
+			if (i >= (height - 1) * width)
+			{
+
+			}
+			else
+			{
+
+			}
+		}
+		else if (i % (width - 1) == 0) // right most
+		{
+			if (i >= (height - 1) * width)
+			{
+
+			}
+			else
+			{
+
+			}
+		}
+		else
+		{
+			// bottom
+			if (i >= (height - 1) * width)
+			{
+
+			}
+			else
+			{
+				//right
+				pixels[i + 1].SetClamp(pixels[i + 1].r + r_err * ALPHA, pixels[i + 1].g + g_err * ALPHA, pixels[i + 1].b + b_err * ALPHA);
+				//bottom
+				pixels[i + width].SetClamp(pixels[i + width].r + r_err * GAMMA, pixels[i + width].g + g_err * GAMMA, pixels[i + width].b + b_err * GAMMA);
+				//bottom left
+				pixels[i + width + 1].SetClamp(pixels[i + width + 1].r + r_err * BETA, pixels[i + width + 1].g + g_err * BETA, pixels[i + width + 1].b + b_err * BETA);
+				//bottom right
+				pixels[i + width - 1].SetClamp(pixels[i + width - 1].r + r_err * DELTA, pixels[i + width - 1].g + g_err * DELTA, pixels[i + width - 1].b + b_err * DELTA);
+			}
+		}
+	}
 }
 
 void ImageComposite(Image *bottom, Image *top, Image *result)
