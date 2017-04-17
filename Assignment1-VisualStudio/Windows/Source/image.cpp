@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <float.h>
+//#include <vector>
 
 
 /**
@@ -274,11 +275,61 @@ void Image::Convolve(int *filter, int n, int normalization, int absval) {
 void Image::Blur(int n)
 {
   /* Your Work Here (Section 3.4.1) */
+	double sigma = floor(n / 2.0) / 2.0;
+	double constan = 1.0 / (2.0 * 3.14 * pow(sigma, 2));
+	for (int i = 0; i < num_pixels; i++)
+	{
+		Pixel tmp_pix = pixels[i];
+		tmp_pix.SetClamp(0,0,0);
+		//std::vector<std::vector<int>> arr;
+		for (int j = -1; j < (n-1); j++)
+		{
+			for (int k = -1; k < (n-1); k++)
+			{
+				int idx = i + j * width + k;
+				if (idx >= 0)
+				{
+					int mul = constan * exp(pow(j, 2) + pow(k, 2) / (-2.0 * pow(sigma, 2)));
+
+					tmp_pix.SetClamp(tmp_pix.r + pixels[idx].r * (mul),
+						tmp_pix.g + pixels[idx].g * (mul),
+							tmp_pix.b + pixels[idx].b * (mul));
+				}
+				
+			}
+		}
+		pixels[i] = tmp_pix;
+	}
 }
 
 void Image::Sharpen() 
 {
   /* Your Work Here (Section 3.4.2) */
+	int coef[9] = {-1,-2,-1,-2,19,-2,-1,-2,-1};
+	for (int i = 0; i < num_pixels; i++)
+	{
+		Pixel tmp_pix = pixels[i];
+		tmp_pix.SetClamp(0, 0, 0);
+		int ctr = 0;
+		//std::vector<std::vector<int>> arr;
+		for (int j = -1; j < 2; j++)
+		{
+			for (int k = -1; k < 2; k++)
+			{
+				ctr++;
+				int idx = i + j * width + k;
+				if (idx >= 0)
+				{
+					tmp_pix.SetClamp(tmp_pix.r + pixels[idx].r * coef[ctr],
+						tmp_pix.g + pixels[idx].g * coef[ctr],
+						tmp_pix.b + pixels[idx].b * coef[ctr]);
+				}
+
+			}
+		}
+		tmp_pix.SetClamp(tmp_pix.r * (1.0/7.0), tmp_pix.g * (1.0 / 7.0), tmp_pix.b * (1.0 / 7.0));
+		pixels[i] = tmp_pix;
+	}
 }
 
 void Image::EdgeDetect(int threshold)
