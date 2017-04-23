@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <float.h>
-//#include <vector>
+#include <iostream>
 
 
 /**
@@ -66,11 +66,6 @@ void Image::Brighten (double factor)
 void Image::ChangeContrast (double factor)
 {
   /* Your Work Here (section 3.2.2) */
-	if (factor == 1)
-	{
-		return;
-	}
-
 	/* get the greyscale */
 	int lum = 0;
 	for (int i = 0; i < num_pixels; i++)
@@ -82,7 +77,7 @@ void Image::ChangeContrast (double factor)
 	for (int i = 0; i < num_pixels; i++)
 	{
 		pixels[i].SetClamp((1.0 - factor) * lum + pixels[i].r * factor,
-						   (1.0 - factor) * lum + pixels[i].r * factor,
+						   (1.0 - factor) * lum + pixels[i].g * factor,
 						   (1.0 - factor) * lum + pixels[i].b * factor);
 	}
 }
@@ -106,9 +101,9 @@ void Image::ChangeGamma(double factor)
   /* Your Work Here (section 3.2.4) */
 	for (int i = 0; i < num_pixels; i++)
 	{
-		pixels[i].SetClamp(pow(pixels[i].r, 1.0/factor),
-						   pow(pixels[i].g, 1.0 / factor),
-						   pow(pixels[i].b, 1.0 / factor));
+		pixels[i].SetClamp(pow(pixels[i].r / 255.0, 1.0 / factor) * 255.0,
+						   pow(pixels[i].g / 255.0, 1.0 / factor) * 255.0,
+						   pow(pixels[i].b / 255.0, 1.0 / factor) * 255.0);
 	}
 
 }
@@ -143,9 +138,12 @@ void Image::Quantize (int nbits)
 	for (int i = 0; i < num_pixels; i++) 
 	{
 		double num = pow(2.0, nbits);
-		pixels[i].SetClamp((255.0 / num) * floor(pixels[i].r * num / 256.0),
-						   (255.0 / num) * floor(pixels[i].g * num / 256.0),
-						   (255.0 / num) * floor(pixels[i].b * num / 256.0));
+		float pr = pixels[i].r / 256.0;
+		float pg = pixels[i].g / 256.0;
+		float pb = pixels[i].b / 256.0;
+		pixels[i].SetClamp(floor((255.0) * floor(pr * num) / (num - 1)),
+						   floor((255.0) * floor(pg * num) / (num - 1)),
+						   floor((255.0) * floor(pb * num) / (num - 1)));
 	}
 }
 
@@ -153,13 +151,16 @@ void Image::Quantize (int nbits)
 void Image::RandomDither (int nbits)
 {
   /* Your Work Here (Section 3.3.2) */
-	srand(time_t(NULL));
 	for (int i = 0; i < num_pixels; i++)
 	{
 		double num = pow(2.0, nbits);
-		pixels[i].SetClamp((255.0 / num) * floor(pixels[i].r * num / 256.0 + 0.5 - static_cast <float> (rand()) / static_cast <float> (RAND_MAX)),
-			(255.0 / num) * floor(pixels[i].g * num / 256.0 + 0.5 - static_cast <float> (rand()) / static_cast <float> (RAND_MAX)),
-			(255.0 / num) * floor(pixels[i].b * num / 256.0 + 0.5 - static_cast <float> (rand()) / static_cast <float> (RAND_MAX)));
+		float pr = pixels[i].r / 256.0;
+		float pg = pixels[i].g / 256.0;
+		float pb = pixels[i].b / 256.0;
+		float ran = (-0.5f + rand() / (float)(RAND_MAX));
+		pixels[i].SetClamp(floor((255.0) * floor(pr * num + ran) / (num - 1)),
+			floor((255.0) * floor(pg * num + ran) / (num - 1)),
+			floor((255.0) * floor(pb * num + ran) / (num - 1)));
 	}
 
 }
@@ -275,21 +276,26 @@ void Image::Convolve(int *filter, int n, int normalization, int absval) {
 void Image::Blur(int n)
 {
   /* Your Work Here (Section 3.4.1) */
-	double sigma = floor(n / 2.0) / 2.0;
-	double constan = 1.0 / (2.0 * 3.14 * pow(sigma, 2));
+	float sigma = floor(n / 2.0) / 2.0;
+	float constan = 1.0 / (2.0 * 3.14 * pow(sigma, 2));
 	for (int i = 0; i < num_pixels; i++)
 	{
+		
 		Pixel tmp_pix = pixels[i];
 		tmp_pix.SetClamp(0,0,0);
+		
 		//std::vector<std::vector<int>> arr;
 		for (int j = -1; j < (n-1); j++)
 		{
 			for (int k = -1; k < (n-1); k++)
 			{
+
+				
 				int idx = i + j * width + k;
-				if (idx >= 0)
+				//std::cout << idx << std::endl;
+				if (idx >= 0 && idx < (width * height))
 				{
-					int mul = constan * exp(pow(j, 2) + pow(k, 2) / (-2.0 * pow(sigma, 2)));
+					int mul = constan * exp(pow((j+1), 2) + pow((k+1), 2) / (-2.0 * pow(sigma, 2)));
 
 					tmp_pix.SetClamp(tmp_pix.r + pixels[idx].r * (mul),
 						tmp_pix.g + pixels[idx].g * (mul),
@@ -335,12 +341,52 @@ void Image::Sharpen()
 void Image::EdgeDetect(int threshold)
 {
   /* Your Work Here (Section 3.4.3) */
+	int coefH[9] = { -1,0,1,-2,0,2,-1,0,1 };
+	int coefV[9] = { 1,2,1,0,0,0,-1,-2,-1 };
+	Pixel * hor_pix = pixels;
+	Pixel * ver_pix = pixels;
+	Pixel * fin_pix = pixels;
+	for (int i = 0; i < num_pixels; i++)
+	{
+		int ctr = 0;
+		ver_pix[i].SetClamp(0, 0, 0);
+		hor_pix[i].SetClamp(0, 0, 0);
+		fin_pix[i].SetClamp(0, 0, 0);
+		for (int j = -1; j < 2; j++)
+		{
+			for (int k = -1; k < 2; k++)
+			{
+				ctr++;
+				int idx = i + j * width + k;
+				if (idx >= 0 && idx < (width * height))
+				{
+					hor_pix[i].SetClamp(hor_pix[i].r + pixels[idx].r * coefH[ctr],
+						hor_pix[i].g + pixels[idx].g * coefH[ctr],
+						hor_pix[i].b + pixels[idx].b * coefH[ctr]);
+
+					ver_pix[i].SetClamp(ver_pix[i].r + pixels[idx].r * coefV[ctr],
+						ver_pix[i].g + pixels[idx].g * coefV[ctr],
+						ver_pix[i].b + pixels[idx].b * coefV[ctr]);
+				}
+			}
+		}
+	}
+	for (int i = 0; i < num_pixels; i++)
+	{
+		fin_pix[i].SetClamp(sqrt(pow(hor_pix[i].r, 2) + pow(ver_pix[i].r, 2)),
+			sqrt(pow(hor_pix[i].g, 2) + pow(ver_pix[i].g, 2)),
+			sqrt(pow(hor_pix[i].b, 2) + pow(ver_pix[i].b, 2)));
+
+		(fin_pix[i].Luminance() >= threshold) ? pixels[i].SetClamp(255, 255, 255) : pixels[i].SetClamp(0, 0, 0);
+
+	}
 }
 
 
 Image* Image::Scale(int sizex, int sizey)
 {
   /* Your Work Here (Section 3.5.1) */
+
   return NULL ;
 }
 
