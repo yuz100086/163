@@ -261,7 +261,7 @@ void ImageComposite(Image *bottom, Image *top, Image *result)
   // You will have to use the alpha channel here to create Mattes
   // One idea is to composite your face into a famous picture
 }
-
+/*
 void Image::Convolve(int *filter, int n, int normalization, int absval) {
   // This is my definition of an auxiliary function for image convolution 
   // with an integer filter of width n and certain normalization.
@@ -271,7 +271,7 @@ void Image::Convolve(int *filter, int n, int normalization, int absval) {
   // But this form is just for guidance and is completely optional.
   // Your solution NEED NOT fill in this function at all
   // Or it can use an alternate form or definition
-}
+}*/
 
 void Image::Blur(int n)
 {
@@ -283,23 +283,21 @@ void Image::Blur(int n)
 		
 		Pixel tmp_pix = pixels[i];
 		tmp_pix.SetClamp(0,0,0);
-		
+		int col = i % width;
+		int row = floor(i / width);
 		//std::vector<std::vector<int>> arr;
 		for (int j = -1; j < (n-1); j++)
 		{
 			for (int k = -1; k < (n-1); k++)
 			{
-
 				
-				int idx = i + j * width + k;
-				//std::cout << idx << std::endl;
-				if (idx >= 0 && idx < (width * height))
+				if (ValidCoord(row + j, col + k))
 				{
 					int mul = constan * exp(pow((j+1), 2) + pow((k+1), 2) / (-2.0 * pow(sigma, 2)));
 
-					tmp_pix.SetClamp(tmp_pix.r + pixels[idx].r * (mul),
-						tmp_pix.g + pixels[idx].g * (mul),
-							tmp_pix.b + pixels[idx].b * (mul));
+					tmp_pix.SetClamp(tmp_pix.r + GetPixel(row + j, col + k).r * (mul),
+						tmp_pix.g + GetPixel(row + j, col + k).g * (mul),
+							tmp_pix.b + GetPixel(row + j, col + k).b * (mul));
 				}
 				
 			}
@@ -307,78 +305,205 @@ void Image::Blur(int n)
 		pixels[i] = tmp_pix;
 	}
 }
-
+int LefRem( int x ,int lim) {
+	if (x < 0)
+	{
+		return -x - 1;
+	}
+	else if (x >= lim)
+	{
+		return 2 * lim - x - 1;
+	}
+	else
+	{
+		return x;
+	}
+}
 void Image::Sharpen() 
 {
   /* Your Work Here (Section 3.4.2) */
-	int coef[9] = {-1,-2,-1,-2,19,-2,-1,-2,-1};
-	for (int i = 0; i < num_pixels; i++)
+	int * coef = new int[9];
+	coef[0] = -1;
+	coef[1] = -2;
+	coef[2] = -1;
+	coef[3] = -2;
+	coef[4] = 19;
+	coef[5] = -2;
+	coef[6] = -1;
+	coef[7] = -2;
+	coef[8] = -1;
+	for (int h = 0; h < height; h++)
 	{
-		Pixel tmp_pix = pixels[i];
-		tmp_pix.SetClamp(0, 0, 0);
-		int ctr = 0;
-		//std::vector<std::vector<int>> arr;
-		for (int j = -1; j < 2; j++)
+		for (int w = 0; w < width; w++)
 		{
-			for (int k = -1; k < 2; k++)
+			//int ctr = 0;
+			int r = 0;
+			int g = 0;
+			int b = 0;
+			for (int j = 0; j < 3; j++)
 			{
-				ctr++;
-				int idx = i + j * width + k;
-				if (idx >= 0)
+				for (int k = 0; k < 3; k++)
 				{
-					tmp_pix.SetClamp(tmp_pix.r + pixels[idx].r * coef[ctr],
-						tmp_pix.g + pixels[idx].g * coef[ctr],
-						tmp_pix.b + pixels[idx].b * coef[ctr]);
+					//ctr++;
+					int x = LefRem(w - (j - 1), width);
+					int y = LefRem(h - (k - 1), width);
+					if (ValidCoord(x, y))
+					{
+						r = r + GetPixel(x, y).r * coef[k * 3 + j];
+						g = g + GetPixel(x, y).g * coef[k * 3 + j];
+						b = b + GetPixel(x, y).b * coef[k * 3 + j];
+					}
 				}
-
 			}
+			GetPixel(w, h).SetClamp(r / 7,g / 7,b / 7);
 		}
-		tmp_pix.SetClamp(tmp_pix.r * (1.0/7.0), tmp_pix.g * (1.0 / 7.0), tmp_pix.b * (1.0 / 7.0));
-		pixels[i] = tmp_pix;
+	}
+}
+
+
+int Lim(int x, int lim) {
+	if (x < 0)
+		return 0;
+	else if (x >= lim)
+		return lim - 1;
+	else
+		return x;
+}
+void Image::Convolve(int *filter, int n, int normalization, int absval) {
+	// This is my definition of an auxiliary function for image convolution 
+	// with an integer filter of width n and certain normalization.
+	// The absval param is to consider absolute values for edge detection.
+
+	// It is helpful if you write an auxiliary convolve function.
+	// But this form is just for guidance and is completely optional.
+	// Your solution NEED NOT fill in this function at all
+	// Or it can use an alternate form or definition
+	int sumr, sumg, sumb;
+	sumr = sumg = sumb = 0;
+
+	for (int h = 0; h < height; h++) {
+		for (int w = 0; w < width; w++) {
+			for (int p = 0; p < n; p++) {
+				for (int q = 0; q < n; q++) {
+					int x = 0;
+					int y = 0;
+					int mp = 0;
+					if (absval) {
+						mp = 2;
+						x = Lim(w - (p - mp), width);
+						y = Lim(h - (q - mp), height);
+					}
+					else {
+						mp = n / 2;
+						x = LefRem(w - (p - mp), width);
+						y = LefRem(h - (q - mp), height);
+					}
+					if (!ValidCoord(x, y)) continue;
+					Pixel curr = GetPixel(x, y);
+					int filt = filter[q * n + p];
+					sumr += (int)curr.r * filt;
+					sumg += (int)curr.g * filt;
+					sumb += (int)curr.b * filt;
+				}
+			}
+			if (absval) {
+				sumr = abs(sumr);
+				sumg = abs(sumg);
+				sumb = abs(sumb);
+			}
+			GetPixel(w, h).SetClamp(sumr / normalization, sumg / normalization, sumb / normalization);
+			sumr = sumg = sumb = 0;
+		}
 	}
 }
 
 void Image::EdgeDetect(int threshold)
 {
   /* Your Work Here (Section 3.4.3) */
-	int coefH[9] = { -1,0,1,-2,0,2,-1,0,1 };
-	int coefV[9] = { 1,2,1,0,0,0,-1,-2,-1 };
-	Pixel * hor_pix = pixels;
-	Pixel * ver_pix = pixels;
-	Pixel * fin_pix = pixels;
-	for (int i = 0; i < num_pixels; i++)
-	{
-		int ctr = 0;
-		ver_pix[i].SetClamp(0, 0, 0);
-		hor_pix[i].SetClamp(0, 0, 0);
-		fin_pix[i].SetClamp(0, 0, 0);
-		for (int j = -1; j < 2; j++)
-		{
-			for (int k = -1; k < 2; k++)
-			{
-				ctr++;
-				int idx = i + j * width + k;
-				if (idx >= 0 && idx < (width * height))
-				{
-					hor_pix[i].SetClamp(hor_pix[i].r + pixels[idx].r * coefH[ctr],
-						hor_pix[i].g + pixels[idx].g * coefH[ctr],
-						hor_pix[i].b + pixels[idx].b * coefH[ctr]);
+	int * coefH = new int[9];
+	coefH[0] = -1;
+	coefH[1] = 0;
+	coefH[2] = 1;
+	coefH[3] = -2;
+	coefH[4] = 0;
+	coefH[5] = 2;
+	coefH[6] = -1;
+	coefH[7] = 0;
+	coefH[8] = 1;
 
-					ver_pix[i].SetClamp(ver_pix[i].r + pixels[idx].r * coefV[ctr],
-						ver_pix[i].g + pixels[idx].g * coefV[ctr],
-						ver_pix[i].b + pixels[idx].b * coefV[ctr]);
+	Pixel * hor_pix = new Pixel[num_pixels];
+	for (int h = 0; h < height; h++)
+	{
+		for (int w = 0; w < width; w++)
+		{
+			//int ctr = 0;
+			int r = 0;
+			int g = 0;
+			int b = 0;
+			for (int j = 0; j < 3; j++)
+			{
+				for (int k = 0; k < 3; k++)
+				{
+					//ctr++;
+					int x = Lim(w - (j - 2), width);
+					int y = Lim(h - (k - 2), height);
+					if (ValidCoord(x, y))
+					{
+						r = r + GetPixel(x, y).r * coefH[k * 3 + j];
+						g = g + GetPixel(x, y).g * coefH[k * 3 + j];
+						b = b + GetPixel(x, y).b * coefH[k * 3 + j];
+					}
 				}
 			}
+			hor_pix[h*width + w].SetClamp(abs(r), abs(g), abs(b));
 		}
 	}
+
+	int * coefV = new int[9];
+	coefV[0] = 1;
+	coefV[1] = 2;
+	coefV[2] = 1;
+	coefV[3] = 0;
+	coefV[4] = 0;
+	coefV[5] = 0;
+	coefV[6] = -1;
+	coefV[7] = -2;
+	coefV[8] = -1;
+
+	Pixel * ver_pix = new Pixel[num_pixels];
+	for (int h = 0; h < height; h++)
+	{
+		for (int w = 0; w < width; w++)
+		{
+			//int ctr = 0;
+			int r = 0;
+			int g = 0;
+			int b = 0;
+			for (int j = 0; j < 3; j++)
+			{
+				for (int k = 0; k < 3; k++)
+				{
+					//ctr++;
+					int x = Lim(w - (j - 2), width);
+					int y = Lim(h - (k - 2), height);
+					if (ValidCoord(x, y))
+					{
+						r = r + GetPixel(x, y).r * coefV[k * 3 + j];
+						g = g + GetPixel(x, y).g * coefV[k * 3 + j];
+						b = b + GetPixel(x, y).b * coefV[k * 3 + j];
+					}
+				}
+			}
+			ver_pix[h*width + w].SetClamp(abs(r), abs(g), abs(b));
+		}
+	}
+
+
+	double gradient;
 	for (int i = 0; i < num_pixels; i++)
 	{
-		fin_pix[i].SetClamp(sqrt(pow(hor_pix[i].r, 2) + pow(ver_pix[i].r, 2)),
-			sqrt(pow(hor_pix[i].g, 2) + pow(ver_pix[i].g, 2)),
-			sqrt(pow(hor_pix[i].b, 2) + pow(ver_pix[i].b, 2)));
-
-		(fin_pix[i].Luminance() >= threshold) ? pixels[i].SetClamp(255, 255, 255) : pixels[i].SetClamp(0, 0, 0);
-
+		gradient = sqrt(pow(hor_pix[i].Luminance(),2) + pow(ver_pix[i].Luminance(),2));
+		(gradient > threshold) ? pixels[i].SetClamp(255, 255, 255) : pixels[i].SetClamp(0, 0, 0);
 	}
 }
 
