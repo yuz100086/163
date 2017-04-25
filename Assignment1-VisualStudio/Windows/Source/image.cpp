@@ -5,7 +5,7 @@
 #include <string.h>
 #include <float.h>
 #include <iostream>
-
+#include <cmath>
 
 /**
  * Image
@@ -261,7 +261,7 @@ void ImageComposite(Image *bottom, Image *top, Image *result)
   // You will have to use the alpha channel here to create Mattes
   // One idea is to composite your face into a famous picture
 }
-/*
+
 void Image::Convolve(int *filter, int n, int normalization, int absval) {
   // This is my definition of an auxiliary function for image convolution 
   // with an integer filter of width n and certain normalization.
@@ -271,41 +271,9 @@ void Image::Convolve(int *filter, int n, int normalization, int absval) {
   // But this form is just for guidance and is completely optional.
   // Your solution NEED NOT fill in this function at all
   // Or it can use an alternate form or definition
-}*/
-
-void Image::Blur(int n)
-{
-  /* Your Work Here (Section 3.4.1) */
-	float sigma = floor(n / 2.0) / 2.0;
-	float constan = 1.0 / (2.0 * 3.14 * pow(sigma, 2));
-	for (int i = 0; i < num_pixels; i++)
-	{
-		
-		Pixel tmp_pix = pixels[i];
-		tmp_pix.SetClamp(0,0,0);
-		int col = i % width;
-		int row = floor(i / width);
-		//std::vector<std::vector<int>> arr;
-		for (int j = -1; j < (n-1); j++)
-		{
-			for (int k = -1; k < (n-1); k++)
-			{
-				
-				if (ValidCoord(row + j, col + k))
-				{
-					int mul = constan * exp(pow((j+1), 2) + pow((k+1), 2) / (-2.0 * pow(sigma, 2)));
-
-					tmp_pix.SetClamp(tmp_pix.r + GetPixel(row + j, col + k).r * (mul),
-						tmp_pix.g + GetPixel(row + j, col + k).g * (mul),
-							tmp_pix.b + GetPixel(row + j, col + k).b * (mul));
-				}
-				
-			}
-		}
-		pixels[i] = tmp_pix;
-	}
 }
-int LefRem( int x ,int lim) {
+
+int LefRem(int x, int lim) {
 	if (x < 0)
 	{
 		return -x - 1;
@@ -319,6 +287,58 @@ int LefRem( int x ,int lim) {
 		return x;
 	}
 }
+
+void Image::Blur(int n)
+{
+  /* Your Work Here (Section 3.4.1) */
+	double * coef = new double[n*n];
+	float sigma = floor(n / 2.0) / 2.0;
+	int mean = n / 2;
+	double sum = 0;
+	double PI = 3.1415926;
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < n; j++)
+		{
+			coef[j * n + i] = exp(-0.5f * (pow((i - mean) / sigma, 2) + pow((j - mean) / sigma, 2))) / (2.0f * PI * pow(sigma, 2));
+			sum += coef[j * n + i];
+		}
+	}
+
+	/*for (int i = 0; i < n*n; i++)
+	{
+		coef[i] /= sum;
+	}*/
+	
+	for (int h = 0; h < height; h++)
+	{
+		for (int w = 0; w < width; w++)
+		{
+			//int ctr = 0;
+			double r = 0;
+			double g = 0;
+			double b = 0;
+			for (int j = 0; j < n; j++)
+			{
+				for (int k = 0; k < n; k++)
+				{
+					//ctr++;
+					int x = LefRem(w - (j - mean), width);
+					int y = LefRem(h - (k - mean), width);
+					
+					if (ValidCoord(x, y))
+					{
+						r = r + GetPixel(x, y).r * coef[k * n + j];
+						g = g + GetPixel(x, y).g * coef[k * n + j];
+						b = b + GetPixel(x, y).b * coef[k * n + j];
+					}
+				}
+			}
+			GetPixel(w, h).SetClamp(r/sum, g/sum, b/sum);
+		}
+	}
+}
+
 void Image::Sharpen() 
 {
   /* Your Work Here (Section 3.4.2) */
