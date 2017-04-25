@@ -369,53 +369,6 @@ int Lim(int x, int lim) {
 	else
 		return x;
 }
-void Image::Convolve(int *filter, int n, int normalization, int absval) {
-	// This is my definition of an auxiliary function for image convolution 
-	// with an integer filter of width n and certain normalization.
-	// The absval param is to consider absolute values for edge detection.
-
-	// It is helpful if you write an auxiliary convolve function.
-	// But this form is just for guidance and is completely optional.
-	// Your solution NEED NOT fill in this function at all
-	// Or it can use an alternate form or definition
-	int sumr, sumg, sumb;
-	sumr = sumg = sumb = 0;
-
-	for (int h = 0; h < height; h++) {
-		for (int w = 0; w < width; w++) {
-			for (int p = 0; p < n; p++) {
-				for (int q = 0; q < n; q++) {
-					int x = 0;
-					int y = 0;
-					int mp = 0;
-					if (absval) {
-						mp = 2;
-						x = Lim(w - (p - mp), width);
-						y = Lim(h - (q - mp), height);
-					}
-					else {
-						mp = n / 2;
-						x = LefRem(w - (p - mp), width);
-						y = LefRem(h - (q - mp), height);
-					}
-					if (!ValidCoord(x, y)) continue;
-					Pixel curr = GetPixel(x, y);
-					int filt = filter[q * n + p];
-					sumr += (int)curr.r * filt;
-					sumg += (int)curr.g * filt;
-					sumb += (int)curr.b * filt;
-				}
-			}
-			if (absval) {
-				sumr = abs(sumr);
-				sumg = abs(sumg);
-				sumb = abs(sumb);
-			}
-			GetPixel(w, h).SetClamp(sumr / normalization, sumg / normalization, sumb / normalization);
-			sumr = sumg = sumb = 0;
-		}
-	}
-}
 
 void Image::EdgeDetect(int threshold)
 {
