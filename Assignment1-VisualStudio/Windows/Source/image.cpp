@@ -5,7 +5,7 @@
 #include <string.h>
 #include <float.h>
 #include <iostream>
-#include <cmath>
+
 
 /**
  * Image
@@ -487,16 +487,6 @@ void Image::Sharpen()
 	}
 }
 
-
-int Lim(int x, int lim) {
-	if (x < 0)
-		return 0;
-	else if (x >= lim)
-		return lim - 1;
-	else
-		return x;
-}
-
 void Image::EdgeDetect(int threshold)
 {
   /* Your Work Here (Section 3.4.3) */
@@ -646,11 +636,51 @@ Image* Image::Rotate(double angle)
     return NULL;
 }
 */
+int getMedian(int * arr) {
+	int n = 9;
+	bool swapped = true;
+	while (swapped)
+	{
+		swapped = false;
+		for (int i = 1; i <= n-1; i++)
+		{
+			if (arr[i-1] > arr[i])
+			{
+				int tmp = arr[i - 1];
+				arr[i - 1] = arr[i];
+				arr[i] = tmp;
+				swapped = true;
+			}
+		}
+		n = n - 1;
+	}
+	return arr[(int)(9 / 2)];
+}
 
 
 void Image::Fun()
 {
     /* Your Work Here (Section 3.6) */
+	int median = 1;
+	for (int i = median; i < height - median; i++)
+	{
+		for (int j = median; j < width - median; j++)
+		{
+			int * window_r = new int[9];
+			int * window_g = new int[9];
+			int * window_b = new int[9];
+			for (int x = 0; x < 3; x++)
+			{
+				for (int y = 0; y < 3; y++)
+				{
+					window_r[x + y * 3] = GetPixel(j + x - 1, i + y - 1).r;
+					window_g[x + y * 3] = GetPixel(j + x - 1, i + y - 1).g;
+					window_b[x + y * 3] = GetPixel(j + x - 1, i + y - 1).b;
+				}
+			}
+			GetPixel(j, i).SetClamp(getMedian(window_r), getMedian(window_g), getMedian(window_b));
+		}
+	}
 }
 
 
