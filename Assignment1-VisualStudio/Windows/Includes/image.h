@@ -165,7 +165,7 @@ public:
     void SetSamplingMethod(int method);
 
     // Sample image using current sampling method.
-    Pixel Sample(double u, double v, double sx, double sy);
+    Pixel Sample(double u, double v, double sx, double sy, int type);
 };
 
 // Composites the bottom and top images into the result image.
