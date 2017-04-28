@@ -605,6 +605,8 @@ Image* Image::Scale(int sizex, int sizey)
 void Image::Shift(double sx, double sy)
 {
   /* Your Work Here (Section 3.5.2) */
+	Pixel * pixs = new Pixel[num_pixels];
+	bool used = 0;
 	for (int i = 0; i < height; i++)
 	{
 		for (int j = 0; j < width; j++)
@@ -618,10 +620,17 @@ void Image::Shift(double sx, double sy)
 			}
 			else
 			{
-				GetPixel(j,i) = Sample(j,i,sx,sy,0);
+				//GetPixel(j,i) = Sample(j,i,sx,sy,0);
+				used = 1;
+				pixs[j + i * width] = Sample(j, i, sx, sy, 0);
 			}
 		}
 	}
+	if (used)
+	{
+		memcpy(pixels, pixs, width * height * sizeof(Pixel));
+	}
+	delete[] pixs;
 }
 
 
